@@ -1,7 +1,6 @@
 package interviewtask.currencyconverter.service;
 
 import interviewtask.currencyconverter.currency_converter_tool.Currency;
-import interviewtask.currencyconverter.currency_converter_tool.CurrencyFrom;
 import interviewtask.currencyconverter.currency_converter_tool.CurrencyToBuyRateSellRate;
 import interviewtask.currencyconverter.currency_converter_tool.CurrencyAmountFromTo;
 import interviewtask.currencyconverter.model.ExchangeRate;
@@ -23,14 +22,12 @@ public class ExchangeRateService {
         this.exchangeRateRepository = exchangeRateRepository;
     }
 
-    public List<CurrencyToBuyRateSellRate> getExchangingRateList(String currencyFrom) {
+    public List<CurrencyToBuyRateSellRate> getExchangeRateList(String currencyFrom) {
         List<CurrencyToBuyRateSellRate> currencyToBuyRateSellRate = new ArrayList<>();
 
         List<ExchangeRate> exchangeRates = findExchangeRateList(currencyFrom);
 
-        if (exchangeRates.isEmpty() || exchangeRates.size() != (Currency.values().length - 1)) {
-            return null;
-        } else {
+        if (isExchangeRateListSizeValid(exchangeRates)) {
             for (ExchangeRate exchangeRate : exchangeRates) {
                 currencyToBuyRateSellRate.add(new CurrencyToBuyRateSellRate(
                         exchangeRate.getCurrencyTo().getValue(),
@@ -38,11 +35,10 @@ public class ExchangeRateService {
                         exchangeRate.getSellingRate()));
             }
             return currencyToBuyRateSellRate;
-        }
-    }
 
-    public List<ExchangeRate> findExchangeRateList(String currencyFrom) {
-        return exchangeRateRepository.findAllByCurrencyFrom(Currency.valueOf(currencyFrom));
+        } else {
+            return null;
+        }
     }
 
     public CurrencyToBuyRateSellRate getConvertedAmounts(CurrencyAmountFromTo currencyAmountFromTo) {
@@ -61,9 +57,9 @@ public class ExchangeRateService {
                 return null;
             } else {
                 currencyToBuyRateSellRate.setCurrencyTo(exchangeRate.getCurrencyTo().getValue());
-                currencyToBuyRateSellRate.setBuyingRate(roundToTwoDecimalPlaces
+                currencyToBuyRateSellRate.setBuyingRate(roundToFiveDecimalPlaces
                         (currencyAmountFromTo.getCurrencyAmount() * exchangeRate.getBuyingRate()));
-                currencyToBuyRateSellRate.setSellingRate(roundToTwoDecimalPlaces
+                currencyToBuyRateSellRate.setSellingRate(roundToFiveDecimalPlaces
                         (currencyAmountFromTo.getCurrencyAmount() * exchangeRate.getSellingRate()));
                 return currencyToBuyRateSellRate;
             }
@@ -82,15 +78,19 @@ public class ExchangeRateService {
         }
     }
 
-    public boolean isGetConvertedAmountsNull(CurrencyAmountFromTo currencyAmountFromTo) {
-        return getConvertedAmounts(currencyAmountFromTo) == null;
+    public List<ExchangeRate> findExchangeRateList(String currencyFrom) {
+        return exchangeRateRepository.findAllByCurrencyFrom(Currency.valueOf(currencyFrom));
+    }
+
+    public boolean isExchangeRateListSizeValid(List<ExchangeRate> exchangeRates) {
+        return exchangeRates.size() == (Currency.values().length - 1);
     }
 
     public boolean isCurrencyFromAndToEqual(CurrencyAmountFromTo currencyAmountFromTo) {
         return currencyAmountFromTo.getCurrencyFrom().equals(currencyAmountFromTo.getCurrencyTo());
     }
 
-    public boolean currencyIsNotValid(String currency) {
+    public boolean isCurrencyInvalid(String currency) {
         for (Currency c : Currency.values()) {
             if (c.name().equals(currency)) {
                 return false;
@@ -99,20 +99,16 @@ public class ExchangeRateService {
         return true;
     }
 
-    public boolean converterInputIsMissing(CurrencyAmountFromTo currencyAmountFromTo) {
-        return currencyAmountFromTo.getCurrencyFrom().isEmpty() || currencyAmountFromTo.getCurrencyTo().isEmpty();
-    }
-
-    public boolean amountIsInvalid(double currencyAmount) {
+    public boolean isCurrencyAmountForChangeInvalid(double currencyAmount) {
         return currencyAmount < 0.01;
     }
 
-    public double roundToTwoDecimalPlaces(double number) {
+    public double roundToFiveDecimalPlaces(double number) {
         return Math.round(number * 100000.0) / 100000.0;
     }
 
-    public boolean isCurrencyInputEmpty(CurrencyFrom currencyFrom) {
-        return currencyFrom.getCurrencyFrom().isEmpty();
+    public boolean isCurrencyTypeInputEmpty(String currencyType) {
+        return currencyType.isEmpty();
     }
 }
 

@@ -2,35 +2,29 @@ package interviewtask.currencyconverter.service;
 
 import interviewtask.currencyconverter.currency_converter_tool.Currency;
 import interviewtask.currencyconverter.currency_converter_tool.CurrencyAmountFromTo;
-import interviewtask.currencyconverter.currency_converter_tool.CurrencyFrom;
 import interviewtask.currencyconverter.currency_converter_tool.CurrencyToBuyRateSellRate;
 import interviewtask.currencyconverter.model.ExchangeRate;
 import interviewtask.currencyconverter.repository.ExchangeRateRepository;
-import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import static org.junit.Assert.*;
 import static org.mockito.BDDMockito.*;
 
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @SpringBootTest
-@WebMvcTest(ExchangeRateService.class)
 @RunWith(MockitoJUnitRunner.class)
 public class ExchangeRateServiceTest {
 
     @Mock
-    private ExchangeRateRepository exchangeRateRepository;
+    private ExchangeRateRepository mockExchangeRateRepository;
 
     @Mock
     private CurrencyAmountFromTo mockCurrencyAmountFromTo;
@@ -38,133 +32,132 @@ public class ExchangeRateServiceTest {
     @InjectMocks
     private ExchangeRateService exchangeRateService;
 
-    @Mock
-    private ExchangeRateService mockExchangeRateService;
+    private static List<ExchangeRate> exchangeRateList = new ArrayList<>();
+    private CurrencyAmountFromTo currencyAmountFromTo = new CurrencyAmountFromTo(
+            100, "EUR", "HUF");
 
-    @Test
-    public void getExchangingRateListTest() {
-        String currencyFromString = "EUR";
-        List<CurrencyToBuyRateSellRate> currencyToBuyRateSellRate = new ArrayList<>(Arrays.asList(
-                new CurrencyToBuyRateSellRate("HUF", 360, 355),
-                new CurrencyToBuyRateSellRate("JPY", 125, 120),
-                new CurrencyToBuyRateSellRate("USD", 1.19, 1.18),
-                new CurrencyToBuyRateSellRate("RUB", 92, 89)));
-        List<ExchangeRate> exchangeRates = new ArrayList<>(Arrays.asList(
-                new ExchangeRate(1L, Currency.EUR, Currency.HUF, 360, 355),
-                new ExchangeRate(2L, Currency.EUR, Currency.JPY, 125, 120),
-                new ExchangeRate(2L, Currency.EUR, Currency.USD, 1.19, 1.18),
-                new ExchangeRate(2L, Currency.EUR, Currency.RUB, 92, 89)));
-        given(exchangeRateService.findExchangeRateList(currencyFromString)).willReturn(exchangeRates);
-        Assert.assertEquals(currencyToBuyRateSellRate.get(0).getCurrencyTo(),
-                exchangeRateService.getExchangingRateList(Currency.EUR.getValue()).get(0).getCurrencyTo());
-        Assert.assertEquals(currencyToBuyRateSellRate.get(2).getCurrencyTo(),
-                exchangeRateService.getExchangingRateList(Currency.EUR.getValue()).get(2).getCurrencyTo());
+    @BeforeClass
+    public static void setUp() {
+        long id = 1L;
+        double br = 100.0;
+        double sr = 90.0;
+        for (int i = 1; i < Currency.values().length; i++) {
+            exchangeRateList.add(new ExchangeRate(id, Currency.EUR, Currency.HUF, br, sr));
+            id++;
+            br += 10;
+            sr += 10;
+        }
     }
 
     @Test
-    public void findExchangeRateListTest() {
-        List<ExchangeRate> exchangeRates = new ArrayList<>(Arrays.asList(new ExchangeRate(1L, Currency.EUR, Currency.HUF, 360, 355),
-                new ExchangeRate(2L, Currency.EUR, Currency.JPY, 125, 120)));
-        given(exchangeRateRepository.findAllByCurrencyFrom(Currency.EUR)).willReturn(exchangeRates);
-        Assert.assertEquals(exchangeRates.get(0), exchangeRateService.findExchangeRateList(Currency.EUR.getValue()).get(0));
-        Assert.assertEquals(exchangeRates.get(1), exchangeRateService.findExchangeRateList(Currency.EUR.getValue()).get(1));
+    public void getExchangingRateListTest() {
+        Currency currency = Currency.EUR;
+        List<CurrencyToBuyRateSellRate> currencyToBuyRateSellRate = new ArrayList<>(Arrays.asList(
+                new CurrencyToBuyRateSellRate("HUF", 100, 90),
+                new CurrencyToBuyRateSellRate("HUF", 110, 100),
+                new CurrencyToBuyRateSellRate("HUF", 120, 110)));
+        when(mockExchangeRateRepository.findAllByCurrencyFrom(currency)).thenReturn(exchangeRateList);
+        assertEquals(currencyToBuyRateSellRate.get(0).getCurrencyTo(),
+                exchangeRateService.getExchangeRateList(currency.getValue()).get(0).getCurrencyTo());
+        assertEquals(currencyToBuyRateSellRate.get(2).getBuyingRate(),
+                exchangeRateService.getExchangeRateList(currency.getValue()).get(2).getBuyingRate(), 0.1);
     }
 
     @Test
     public void getConvertedAmountsTest() {
-        CurrencyToBuyRateSellRate currencyToBuyRateSellRate = new CurrencyToBuyRateSellRate("HUF", 36000, 35500);
-        Optional<ExchangeRate> exchangeRates = Optional.of(new ExchangeRate(1L, Currency.EUR, Currency.HUF, 360, 355));
-        CurrencyAmountFromTo currencyAmountFromTo = new CurrencyAmountFromTo(100, "EUR", "HUF");
-        given(exchangeRateRepository.findByCurrencyFromAndCurrencyTo(Currency.EUR, Currency.HUF)).willReturn(exchangeRates);
-        Assert.assertEquals(currencyToBuyRateSellRate.getBuyingRate(),
+        CurrencyToBuyRateSellRate currencyToBuyRateSellRate = new CurrencyToBuyRateSellRate(
+                "HUF", 36000, 35500);
+        Optional<ExchangeRate> optionalExchangeRate = Optional.of(
+                new ExchangeRate(1L, Currency.EUR, Currency.HUF, 360, 355));
+        when(mockExchangeRateRepository.findByCurrencyFromAndCurrencyTo(Currency.EUR, Currency.HUF))
+                .thenReturn(optionalExchangeRate);
+        assertEquals(currencyToBuyRateSellRate.getBuyingRate(),
                 exchangeRateService.getConvertedAmounts(currencyAmountFromTo).getBuyingRate(), 0.000001);
-        Assert.assertEquals(currencyToBuyRateSellRate.getCurrencyTo(),
+        assertEquals(currencyToBuyRateSellRate.getCurrencyTo(),
                 exchangeRateService.getConvertedAmounts(currencyAmountFromTo).getCurrencyTo());
     }
 
     @Test
     public void findExchangeRateTest() {
-        CurrencyAmountFromTo currencyAmountFromTo = new CurrencyAmountFromTo(100, "EUR", "HUF");
-        ExchangeRate exchangeRates = new ExchangeRate(1L, Currency.EUR, Currency.HUF, 360, 355);
-        given(exchangeRateRepository.findByCurrencyFromAndCurrencyTo(Currency.EUR, Currency.HUF)).willReturn(Optional.of(exchangeRates));
-        Assert.assertEquals(exchangeRates, exchangeRateService.findExchangeRate(currencyAmountFromTo));
+        ExchangeRate exchangeRate = new ExchangeRate(1L, Currency.EUR, Currency.HUF, 360, 355);
+        when(mockExchangeRateRepository.findByCurrencyFromAndCurrencyTo(Currency.EUR, Currency.HUF))
+                .thenReturn(Optional.of(exchangeRate));
+        assertEquals(exchangeRate, exchangeRateService.findExchangeRate(currencyAmountFromTo));
+    }
+
+    @Test
+    public void findExchangeRateListTest() {
+        when(mockExchangeRateRepository.findAllByCurrencyFrom(Currency.EUR)).thenReturn(exchangeRateList);
+        assertEquals(exchangeRateList.get(0), exchangeRateService.findExchangeRateList(Currency.EUR.getValue()).get(0));
+        assertEquals(exchangeRateList.get(1), exchangeRateService.findExchangeRateList(Currency.EUR.getValue()).get(1));
+    }
+
+    @Test
+    public void isExchangeRateListSizeValidTestTrue() {
+        assertTrue(exchangeRateService.isExchangeRateListSizeValid(exchangeRateList));
+    }
+
+    @Test
+    public void isExchangeRateListSizeValidTestFalse() {
+        exchangeRateList.add(new ExchangeRate(
+                exchangeRateList.size() + 1, Currency.EUR, Currency.HUF, 90, 80));
+        assertFalse(exchangeRateService.isExchangeRateListSizeValid(exchangeRateList));
     }
 
     @Test
     public void isCurrencyFromAndToEqualTestTrue() {
-        Mockito.when(mockCurrencyAmountFromTo.getCurrencyFrom()).thenReturn("HUF");
-        Mockito.when(mockCurrencyAmountFromTo.getCurrencyTo()).thenReturn("HUF");
-        Assert.assertTrue(exchangeRateService.isCurrencyFromAndToEqual(mockCurrencyAmountFromTo));
+        when(mockCurrencyAmountFromTo.getCurrencyFrom()).thenReturn("HUF");
+        when(mockCurrencyAmountFromTo.getCurrencyTo()).thenReturn("HUF");
+        assertTrue(exchangeRateService.isCurrencyFromAndToEqual(mockCurrencyAmountFromTo));
     }
 
     @Test
     public void isCurrencyFromAndToEqualTestFalse() {
-        Mockito.when(mockCurrencyAmountFromTo.getCurrencyFrom()).thenReturn("EUR");
-        Mockito.when(mockCurrencyAmountFromTo.getCurrencyTo()).thenReturn("HUF");
-        Assert.assertFalse(exchangeRateService.isCurrencyFromAndToEqual(mockCurrencyAmountFromTo));
+        when(mockCurrencyAmountFromTo.getCurrencyFrom()).thenReturn("EUR");
+        when(mockCurrencyAmountFromTo.getCurrencyTo()).thenReturn("HUF");
+        assertFalse(exchangeRateService.isCurrencyFromAndToEqual(mockCurrencyAmountFromTo));
     }
 
     @Test
-    public void currencyIsNotValidTestTrue() {
+    public void isCurrencyInvalidTestTrue() {
         String notValidCurrency = "Forint";
-        Assert.assertTrue(exchangeRateService.currencyIsNotValid(notValidCurrency));
+        assertTrue(exchangeRateService.isCurrencyInvalid(notValidCurrency));
     }
 
     @Test
-    public void currencyIsNotValidTestFalse() {
+    public void isCurrencyInvalidTestFalse() {
         String validCurrency = "HUF";
-        Assert.assertFalse(exchangeRateService.currencyIsNotValid(validCurrency));
-    }
-
-
-    @Test
-    public void converterInputIsMissingTestCurrencyFromMissing() {
-        Mockito.when(mockCurrencyAmountFromTo.getCurrencyFrom()).thenReturn("");
-        Assert.assertTrue(exchangeRateService.converterInputIsMissing(mockCurrencyAmountFromTo));
+        assertFalse(exchangeRateService.isCurrencyInvalid(validCurrency));
     }
 
     @Test
-    public void converterInputIsMissingTestCurrencyToMissing() {
-        Mockito.when(mockCurrencyAmountFromTo.getCurrencyFrom()).thenReturn("EUR");
-        Mockito.when(mockCurrencyAmountFromTo.getCurrencyTo()).thenReturn("");
-        Assert.assertTrue(exchangeRateService.converterInputIsMissing(mockCurrencyAmountFromTo));
-    }
-
-    @Test
-    public void converterInputIsMissingTestNotMissing() {
-        Mockito.when(mockCurrencyAmountFromTo.getCurrencyFrom()).thenReturn("EUR");
-        Mockito.when(mockCurrencyAmountFromTo.getCurrencyTo()).thenReturn("HUF");
-        Assert.assertFalse(exchangeRateService.converterInputIsMissing(mockCurrencyAmountFromTo));
-    }
-
-    @Test
-    public void amountIsInvalidTestTrue() {
+    public void isCurrencyAmountForChangeInvalidTestTrue() {
         double testNum = 0.001;
-        Assert.assertTrue(exchangeRateService.amountIsInvalid(testNum));
+        assertTrue(exchangeRateService.isCurrencyAmountForChangeInvalid(testNum));
     }
 
     @Test
-    public void amountIsInvalidTestFalse() {
+    public void isCurrencyAmountForChangeInvalidTestFalse() {
         double testNum = 0.01;
-        Assert.assertFalse(exchangeRateService.amountIsInvalid(testNum));
+        assertFalse(exchangeRateService.isCurrencyAmountForChangeInvalid(testNum));
     }
 
     @Test
-    public void roundToTwoDecimalPlacesTest() {
+    public void roundToFiveDecimalPlacesTest() {
         double originalTestNum = 10.5643623468486486;
-        double roundedTestNum = exchangeRateService.roundToTwoDecimalPlaces(originalTestNum);
-        Assert.assertEquals(10.56436, roundedTestNum, 0.000001);
+        double roundedTestNum = exchangeRateService.roundToFiveDecimalPlaces(originalTestNum);
+        assertEquals(10.56436, roundedTestNum, 0.000001);
     }
 
     @Test
     public void isCurrencyInputEmptyTestTrue() {
-        CurrencyFrom currencyFrom = new CurrencyFrom("");
-        Assert.assertTrue(exchangeRateService.isCurrencyInputEmpty(currencyFrom));
+        String currencyFrom = "";
+        assertTrue(exchangeRateService.isCurrencyTypeInputEmpty(currencyFrom));
     }
 
     @Test
     public void isCurrencyInputEmptyTestFalse() {
-        CurrencyFrom currencyFrom = new CurrencyFrom("HUF");
-        Assert.assertFalse(exchangeRateService.isCurrencyInputEmpty(currencyFrom));
+        String currencyFrom = "HUF";
+        assertFalse(exchangeRateService.isCurrencyTypeInputEmpty(currencyFrom));
     }
 }

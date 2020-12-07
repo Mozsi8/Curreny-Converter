@@ -5,13 +5,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 
-/**
- * The CurrencyConverter
- *
- * @author Dániel Mozsolics
- * @version 1.2.8
- * @since 2020-11-17
- */
 @SpringBootApplication
 public class CurrencyConverterApplication extends SpringBootServletInitializer {
 
